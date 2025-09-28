@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { debounce } from 'lodash';
 import type { UserMetrics } from '../types/api';
 import { FaWater, FaWalking, FaDesktop, FaBed, FaHeart } from 'react-icons/fa';
 
@@ -13,8 +14,29 @@ const MetricsPanel: React.FC<MetricsPanelProps> = ({
   onUpdateMetrics,
   isLoading = false,
 }) => {
+  // Local state for immediate UI updates
+  const [localMetrics, setLocalMetrics] = useState<UserMetrics>(metrics);
+
+  // Update local state when props change
+  useEffect(() => {
+    setLocalMetrics(metrics);
+  }, [metrics]);
+
+  // Debounced function to update backend
+  const debouncedUpdate = useCallback(
+    debounce((newMetrics: Partial<UserMetrics>) => {
+      onUpdateMetrics(newMetrics);
+    }, 500),
+    [onUpdateMetrics]
+  );
+
   const handleMetricChange = (key: keyof UserMetrics, value: number) => {
-    onUpdateMetrics({ [key]: value });
+    // Update local state immediately for instant UI feedback
+    const newLocalMetrics = { ...localMetrics, [key]: value };
+    setLocalMetrics(newLocalMetrics);
+
+    // Debounce the backend update
+    debouncedUpdate({ [key]: value });
   };
 
   const getProgressPercentage = (current: number, goal: number) => {
@@ -22,7 +44,7 @@ const MetricsPanel: React.FC<MetricsPanelProps> = ({
   };
 
   return (
-    <div className="bg-pink-50 rounded-xl shadow-md p-6 -mt-6">
+    <div className="bg-pink-300 rounded-xl shadow-md p-6 -mt-6">
       <h2 className="text-xl font-bold text-gray-800 mb-5">Daily Metrics</h2>
 
       <div className="space-y-8">
@@ -35,26 +57,26 @@ const MetricsPanel: React.FC<MetricsPanelProps> = ({
                 Water (ml)
               </span>
               <span className="text-sm text-gray-600">
-                {metrics.water_ml} / 2000
+                {localMetrics.water_ml} / 2000
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div
                 className="bg-blue-500 h-2 rounded-full transition-all duration-300"
                 style={{
-                  width: `${getProgressPercentage(metrics.water_ml, 2000)}%`,
+                  width: `${getProgressPercentage(localMetrics.water_ml, 2000)}%`,
                 }}
               ></div>
             </div>
           </div>
           <input
             type="number"
-            value={metrics.water_ml}
+            value={localMetrics.water_ml}
             onChange={(e) =>
               handleMetricChange('water_ml', parseInt(e.target.value) || 0)
             }
             disabled={isLoading}
-            className="w-20 px-2 py-1 text-sm border border-gray-300 rounded disabled:bg-gray-100"
+            className="w-20 px-2 py-1 text-sm border border-gray-300 rounded bg-gray-100 disabled:bg-gray-100"
             min="0"
             max="5000"
           />
@@ -67,26 +89,26 @@ const MetricsPanel: React.FC<MetricsPanelProps> = ({
             <div className="flex justify-between items-center mb-1">
               <span className="text-sm font-medium text-gray-700">Steps</span>
               <span className="text-sm text-gray-600">
-                {metrics.steps} / 8000
+                {localMetrics.steps} / 8000
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div
                 className="bg-green-500 h-2 rounded-full transition-all duration-300"
                 style={{
-                  width: `${getProgressPercentage(metrics.steps, 8000)}%`,
+                  width: `${getProgressPercentage(localMetrics.steps, 8000)}%`,
                 }}
               ></div>
             </div>
           </div>
           <input
             type="number"
-            value={metrics.steps}
+            value={localMetrics.steps}
             onChange={(e) =>
               handleMetricChange('steps', parseInt(e.target.value) || 0)
             }
             disabled={isLoading}
-            className="w-20 px-2 py-1 text-sm border border-gray-300 rounded disabled:bg-gray-100"
+            className="w-20 px-2 py-1 text-sm border border-gray-300 rounded bg-gray-100 disabled:bg-gray-100"
             min="0"
             max="20000"
           />
@@ -101,26 +123,26 @@ const MetricsPanel: React.FC<MetricsPanelProps> = ({
                 Sleep (hours)
               </span>
               <span className="text-sm text-gray-600">
-                {metrics.sleep_hours} / 7
+                {localMetrics.sleep_hours} / 7
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div
                 className="bg-purple-500 h-2 rounded-full transition-all duration-300"
                 style={{
-                  width: `${getProgressPercentage(metrics.sleep_hours, 7)}%`,
+                  width: `${getProgressPercentage(localMetrics.sleep_hours, 7)}%`,
                 }}
               ></div>
             </div>
           </div>
           <input
             type="number"
-            value={metrics.sleep_hours}
+            value={localMetrics.sleep_hours}
             onChange={(e) =>
               handleMetricChange('sleep_hours', parseFloat(e.target.value) || 0)
             }
             disabled={isLoading}
-            className="w-20 px-2 py-1 text-sm border border-gray-300 rounded disabled:bg-gray-100"
+            className="w-20 px-2 py-1 text-sm border border-gray-300 rounded bg-gray-100 disabled:bg-gray-100"
             min="0"
             max="12"
             step="0.5"
@@ -136,23 +158,25 @@ const MetricsPanel: React.FC<MetricsPanelProps> = ({
                 Screen Time (min)
               </span>
               <span className="text-sm text-gray-600">
-                {metrics.screen_time_min} / 120
+                {localMetrics.screen_time_min} / 120
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div
                 className={`h-2 rounded-full transition-all duration-300 ${
-                  metrics.screen_time_min > 120 ? 'bg-red-500' : 'bg-orange-500'
+                  localMetrics.screen_time_min > 120
+                    ? 'bg-red-500'
+                    : 'bg-orange-500'
                 }`}
                 style={{
-                  width: `${getProgressPercentage(metrics.screen_time_min, 120)}%`,
+                  width: `${getProgressPercentage(localMetrics.screen_time_min, 120)}%`,
                 }}
               ></div>
             </div>
           </div>
           <input
             type="number"
-            value={metrics.screen_time_min}
+            value={localMetrics.screen_time_min}
             onChange={(e) =>
               handleMetricChange(
                 'screen_time_min',
@@ -160,7 +184,7 @@ const MetricsPanel: React.FC<MetricsPanelProps> = ({
               )
             }
             disabled={isLoading}
-            className="w-20 px-2 py-1 text-sm border border-gray-300 rounded disabled:bg-gray-100"
+            className="w-20 px-2 py-1 text-sm border border-gray-300 rounded bg-gray-100 disabled:bg-gray-100"
             min="0"
             max="1440"
           />
@@ -174,7 +198,7 @@ const MetricsPanel: React.FC<MetricsPanelProps> = ({
               <span className="text-sm font-medium text-gray-700">
                 Mood (1 ~ 5) :{' '}
                 <span className="text-sm text-gray-600">
-                  {metrics.mood_1to5}
+                  {localMetrics.mood_1to5}
                 </span>
               </span>
             </div>
@@ -185,7 +209,7 @@ const MetricsPanel: React.FC<MetricsPanelProps> = ({
                   onClick={() => handleMetricChange('mood_1to5', rating)}
                   disabled={isLoading}
                   className={`w-8 h-8 rounded-full text-sm font-medium transition-all duration-200 ${
-                    metrics.mood_1to5 >= rating
+                    localMetrics.mood_1to5 >= rating
                       ? 'bg-pink-500 text-white'
                       : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                   } disabled:opacity-50`}

@@ -1,7 +1,8 @@
 import axios from 'axios';
 import type { RecommendationResponse, UserMetrics } from '../types/api';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL =
+  import.meta.env.VITE_APP_SERVER_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -44,21 +45,6 @@ export const taskApi = {
     return response.data;
   },
 
-  // Daily reset (admin)
-  dailyReset: async (): Promise<void> => {
-    await api.post('/admin/daily-reset');
-  },
-
-  // Set test scenario (admin)
-  setTestScenario: async (
-    metrics: UserMetrics,
-    taskIgnores?: Record<string, number>
-  ): Promise<void> => {
-    await api.post('/admin/test-scenario', {
-      metrics,
-      task_ignores: taskIgnores,
-    });
-  },
 };
 
 export default api;

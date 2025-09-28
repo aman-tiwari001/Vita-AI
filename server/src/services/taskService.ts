@@ -1,5 +1,7 @@
 import { Task, UserMetrics, TaskScore, TimeWindow } from '../types/index';
 import { ScoringEngine } from './scoringEngine';
+import { UserService } from './userService';
+import { DailyResetService } from './dailyResetService';
 
 export class TaskService {
   private static tasks: Task[] = [
@@ -122,6 +124,11 @@ export class TaskService {
     metrics: UserMetrics,
     currentHour?: number
   ): TaskScore[] {
+    // Check for daily reset on first request of new day
+    if (DailyResetService.checkAndPerformDailyReset()) {
+      this.performDailyReset();
+    }
+
     const currentTimeWindow = ScoringEngine.getCurrentTimeWindow(currentHour);
 
     // Step 1: Get all eligible tasks (not completed today)
@@ -227,7 +234,7 @@ export class TaskService {
   }
 
   /**
-   * Complete a task
+   * Complete a task and update user metrics automatically
    * @param taskId Task ID
    * @returns True if task was marked completed, else false
    */
@@ -235,6 +242,10 @@ export class TaskService {
     const task = this.getTaskById(taskId);
     if (task && !task.completedToday) {
       task.completedToday = true;
+
+      // Auto-update user metrics based on completed task
+      this.updateMetricsForCompletedTask(task);
+
       return true;
     }
     return false;
@@ -259,11 +270,76 @@ export class TaskService {
    * Daily reset - reset ignores and completedToday for all tasks
    */
   static dailyReset(): void {
+    this.performDailyReset();
+    DailyResetService.forceDailyReset();
+  }
+
+  /**
+   * Internal method to perform the actual reset
+   */
+  private static performDailyReset(): void {
+    console.log('🔄 Performing daily reset of tasks');
     this.tasks.forEach((task) => {
       task.ignores = 0;
       task.completedToday = false;
     });
     this.recentlyDismissed.clear();
+
+    // Also reset user metrics
+    UserService.resetDailyMetrics();
+  }
+
+  /**
+   * Update user metrics when a task is completed
+   */
+  private static updateMetricsForCompletedTask(task: Task): void {
+    const currentMetrics = UserService.getCurrentMetrics();
+    const updates: Partial<UserMetrics> = {};
+
+    // Extract numeric values from task titles and update metrics accordingly
+    switch (task.category) {
+      case 'hydration':
+        if (task.id === 'water-500') {
+          updates.water_ml = currentMetrics.water_ml + 500;
+        } else if (task.id === 'water-250') {
+          updates.water_ml = currentMetrics.water_ml + 250;
+        }
+        break;
+
+      case 'movement':
+        if (task.id === 'steps-1k') {
+          updates.steps = currentMetrics.steps + 1000;
+        } else if (task.id === 'steps-300') {
+          updates.steps = currentMetrics.steps + 300;
+        }
+        break;
+
+      case 'screen':
+        // For screen break, we don't directly update metrics
+        // but we could track break completion
+        break;
+
+      case 'sleep':
+        // Sleep tasks don't directly update sleep hours
+        // (those are from previous night's sleep)
+        break;
+
+      case 'mood':
+        // Mood check-in could potentially improve mood score slightly
+        if (currentMetrics.mood_1to5 < 5) {
+          updates.mood_1to5 = Math.min(currentMetrics.mood_1to5 + 0.5, 5);
+        }
+        break;
+    }
+
+    // Update metrics if there are changes
+    if (Object.keys(updates).length > 0) {
+      UserService.updateMetrics(updates);
+      console.log(
+        `📊 Auto-updated metrics for completed task ${task.id}:`,
+        updates
+      );
+    }
   }
 
   /**

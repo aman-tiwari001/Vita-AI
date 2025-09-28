@@ -28,34 +28,34 @@ const TaskCard: React.FC<TaskCardProps> = ({
   const getCategoryIcon = () => {
     switch (task.category) {
       case 'hydration':
-        return <FaWater className="w-5 h-5 text-blue-500" />;
+        return <FaWater className="w-7 h-7 text-blue-500" />;
       case 'movement':
-        return <FaWalking className="w-5 h-5 text-green-500" />;
+        return <FaWalking className="w-7 h-7 text-green-500" />;
       case 'screen':
-        return <FaDesktop className="w-5 h-5 text-orange-500" />;
+        return <FaDesktop className="w-7 h-7 text-orange-500" />;
       case 'sleep':
-        return <FaBed className="w-5 h-5 text-purple-500" />;
+        return <FaBed className="w-7 h-7 text-purple-500" />;
       case 'mood':
-        return <FaHeart className="w-5 h-5 text-pink-500" />;
+        return <FaHeart className="w-7 h-7 text-pink-500" />;
       default:
-        return <FaHeart className="w-5 h-5 text-gray-500" />;
+        return <FaHeart className="w-7 h-7 text-gray-500" />;
     }
   };
 
   const getCategoryColor = () => {
     switch (task.category) {
       case 'hydration':
-        return 'border-blue-200 bg-blue-50';
+        return 'border-blue-300 bg-blue-50';
       case 'movement':
-        return 'border-green-200 bg-green-50';
+        return 'border-green-300 bg-green-50';
       case 'screen':
-        return 'border-orange-200 bg-orange-50';
+        return 'border-orange-300 bg-orange-50';
       case 'sleep':
-        return 'border-purple-200 bg-purple-50';
+        return 'border-purple-300 bg-purple-50';
       case 'mood':
-        return 'border-pink-200 bg-pink-50';
+        return 'border-pink-300 bg-pink-50';
       default:
-        return 'border-gray-200 bg-gray-50';
+        return 'border-gray-300 bg-gray-50';
     }
   };
 
@@ -64,34 +64,35 @@ const TaskCard: React.FC<TaskCardProps> = ({
       className={`relative p-4 rounded-lg border-2 transition-all duration-300 hover:shadow-lg ${getCategoryColor()} ${isLoading ? 'opacity-50' : ''}`}
     >
       {/* Header */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
+      <div className="flex items-start justify-between mb-3 py-1">
+        <div className="flex items-baseline-last gap-3">
           {getCategoryIcon()}
           <div className="flex-1">
             <h3 className="font-semibold text-gray-800 text-sm leading-tight">
               {task.title}
             </h3>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs text-gray-600">
-                {task.effort_min} min
-              </span>
-              <span className="text-xs text-gray-400">•</span>
-              <span className="text-xs font-medium text-gray-700">
-                Score: {score.toFixed(2)}
-              </span>
+            <div className="flex items-center justify-between gap-[240px] w-full mt-1">
+              <div className="flex items-center gap-2 ">
+                <span className="text-xs text-gray-600">
+                  {task.effort_min} min
+                </span>
+                <span className="text-xs text-gray-400">•</span>
+                <span className="text-xs font-medium text-gray-700">
+                  Score: {score.toFixed(2)}
+                </span>
+              </div>
+              {/* Time Gate Indicator */}
+              {task.time_gate && (
+                <div className="mb-3">
+                  <span className="inline-block px-2 py-1 text-xs rounded-full bg-pink-200 text-black capitalize">
+                    {task.time_gate}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
-
-      {/* Time Gate Indicator */}
-      {task.time_gate && (
-        <div className="mb-3">
-          <span className="inline-block px-2 py-1 text-xs rounded-full bg-gray-200 text-gray-600 capitalize">
-            {task.time_gate}
-          </span>
-        </div>
-      )}
 
       {/* Actions */}
       <div className="flex gap-2">

@@ -2,11 +2,10 @@ import { useState, useEffect } from 'react';
 import { toast, Toaster } from 'react-hot-toast';
 import TaskCard from './components/TaskCard';
 import MetricsPanel from './components/MetricsPanel';
-import TestScenariosPanel from './components/TestScenariosPanel';
 import { taskApi } from './services/api';
 import type { TaskScore, UserMetrics } from './types/api';
-import './App.css';
 import Topbar from './components/Topbar';
+import { debounce } from 'lodash';
 
 function App() {
   const [recommendations, setRecommendations] = useState<TaskScore[]>([]);
@@ -27,7 +26,6 @@ function App() {
       const response = await taskApi.getRecommendations();
       setRecommendations(response.recommendations);
       setMetrics(response.user_metrics);
-      toast.success('Refreshed');
     } catch (error) {
       console.error('Error fetching recommendations:', error);
       toast.error('Failed to load recommendations');
@@ -76,82 +74,16 @@ function App() {
   // Handle metrics update
   const handleUpdateMetrics = async (newMetrics: Partial<UserMetrics>) => {
     try {
-      setIsLoading(true);
-      const response = await taskApi.updateMetrics(newMetrics);
-      setMetrics(response.metrics);
-      toast.success('Metrics updated');
-      // Refresh recommendations after metrics change
-      await fetchRecommendations();
+      await debounce(async () => {
+        const response = await taskApi.updateMetrics(newMetrics);
+        setMetrics(response.metrics);
+        setIsLoading(true);
+        await fetchRecommendations();
+        toast.success('Metrics updated');
+      }, 500)();
     } catch (error) {
       console.error('Error updating metrics:', error);
       toast.error('Failed to update metrics');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Handle test scenarios
-  const handleSetScenario = async (scenarioId: string) => {
-    try {
-      setIsLoading(true);
-
-      if (scenarioId === 'daily-reset') {
-        await taskApi.dailyReset();
-        toast.success('Daily reset completed');
-      } else {
-        let testMetrics: UserMetrics;
-        let taskIgnores: Record<string, number> | undefined;
-
-        switch (scenarioId) {
-          case 'scenario-a':
-            testMetrics = {
-              water_ml: 900,
-              steps: 4000,
-              sleep_hours: 6,
-              screen_time_min: 150,
-              mood_1to5: 2,
-            };
-            break;
-          case 'scenario-b':
-            testMetrics = {
-              water_ml: 500,
-              steps: 8000,
-              sleep_hours: 7,
-              screen_time_min: 60,
-              mood_1to5: 4,
-            };
-            taskIgnores = { 'water-500': 3 }; // Trigger substitution
-            break;
-          case 'scenario-c':
-            testMetrics = {
-              water_ml: 2000,
-              steps: 8000,
-              sleep_hours: 7,
-              screen_time_min: 60,
-              mood_1to5: 5,
-            };
-            break;
-          case 'scenario-d':
-            testMetrics = {
-              water_ml: 2000,
-              steps: 8000,
-              sleep_hours: 5,
-              screen_time_min: 60,
-              mood_1to5: 4,
-            };
-            break;
-          default:
-            throw new Error('Unknown scenario');
-        }
-
-        await taskApi.setTestScenario(testMetrics, taskIgnores);
-        toast.success(`${scenarioId.toUpperCase()} set successfully`);
-      }
-
-      await fetchRecommendations();
-    } catch (error) {
-      console.error('Error setting scenario:', error);
-      toast.error('Failed to set scenario');
     } finally {
       setIsLoading(false);
     }
