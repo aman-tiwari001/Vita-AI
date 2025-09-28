@@ -58,6 +58,4 @@ npm run format      # Format code with Prettier
 Create a `.env` file in the server directory with:
 ```
 PORT=5000
-MONGODB_URI=mongodb://localhost:27017/vita-ai
-NODE_ENV=development
 ```
