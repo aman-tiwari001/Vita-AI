@@ -25,7 +25,6 @@ app.get('/', (req, res) => {
       complete_task: 'POST /api/actions/complete',
       dismiss_task: 'POST /api/actions/dismiss',
       metrics: 'GET/POST /api/metrics',
-      admin: '/api/admin/*',
     },
   });
 });

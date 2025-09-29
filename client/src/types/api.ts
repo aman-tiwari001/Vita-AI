@@ -1,4 +1,3 @@
-// API Types
 export interface UserMetrics {
   water_ml: number;
   steps: number;

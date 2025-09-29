@@ -1,4 +1,4 @@
-import { Task, UserMetrics, TaskScore, TimeWindow } from '../types/index';
+import { Task, UserMetrics, TaskScore } from '../types/index';
 import { ScoringEngine } from './scoringEngine';
 import { UserService } from './userService';
 import { DailyResetService } from './dailyResetService';
@@ -115,6 +115,46 @@ export class TaskService {
   }
 
   /**
+   * Filter out micro alternatives to ensure no task and its micro alt appear together
+   * Prefers the higher-scoring task when there's a conflict
+   * @param scoredTasks List of scored tasks (should be sorted by score desc)
+   * @returns Filtered list without micro alternative conflicts
+   */
+  static filterMicroAlternatives(scoredTasks: TaskScore[]): TaskScore[] {
+    const result: TaskScore[] = [];
+    const usedTasks = new Set<string>();
+
+    for (const taskScore of scoredTasks) {
+      const task = taskScore.task;
+
+      // Skip if this task or its related task is already included
+      if (usedTasks.has(task.id)) {
+        continue;
+      }
+
+      // Check if this task has a micro alternative
+      if (task.micro_alt && usedTasks.has(task.micro_alt)) {
+        continue;
+      }
+
+      // Check if this task is a micro alternative of an already included task
+      const parentTask = this.tasks.find((t) => t.micro_alt === task.id);
+      if (parentTask && usedTasks.has(parentTask.id)) {
+        continue;
+      }
+
+      // Add this task and mark both it and its alternative as used
+      result.push(taskScore);
+      usedTasks.add(task.id);
+      if (task.micro_alt) {
+        usedTasks.add(task.micro_alt);
+      }
+    }
+
+    return result;
+  }
+
+  /**
    * Get top 4 task recommendations based on scoring algorithm
    * @param metrics Current user metrics
    * @param currentHour Current hour (0-23) for time window calculation (optional)
@@ -173,12 +213,15 @@ export class TaskService {
       return a.task.id.localeCompare(b.task.id);
     });
 
-    // Step 6: Return top 4 unique tasks
-    let result = scoredTasks.slice(0, 4);
+    // Step 6: Filter to ensure no task and its micro alternative appear together
+    const filteredTasks = this.filterMicroAlternatives(scoredTasks);
 
-    // Step 7: If less than 4 tasks, relax time gates and try again (but don't duplicate IDs)
+    // Step 7: Return top 4 unique tasks
+    let result = filteredTasks.slice(0, 4);
+
+    // Step 8: If less than 4 tasks, relax time gates and try again (but don't duplicate IDs)
     if (result.length < 4) {
-      const usedIds = new Set(result.map((item) => item.task.id));
+      const usedIds = new Set(result.map((item: TaskScore) => item.task.id));
       const remainingTasks = candidateTasks.filter(
         (task) => !usedIds.has(task.id)
       );
@@ -227,7 +270,12 @@ export class TaskService {
         return a.task.id.localeCompare(b.task.id);
       });
 
-      result = [...result, ...relaxedScores].slice(0, 4);
+      // Filter relaxed scores to avoid micro alternative conflicts
+      const filteredRelaxedScores = this.filterMicroAlternatives([
+        ...result,
+        ...relaxedScores,
+      ]);
+      result = filteredRelaxedScores.slice(0, 4);
     }
 
     return result;

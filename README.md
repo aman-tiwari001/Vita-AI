@@ -20,18 +20,17 @@ Vita-AI is a smart wellness task manager that helps users maintain healthy daily
 ```
 server/
 ├── src/
-│   ├── services/               # Core Business Logic
-│   │   ├── scoringEngine.ts   # Deterministic task scoring algorithm
-│   │   ├── taskService.ts     # Task lifecycle management
-│   │   ├── userService.ts     # User metrics management
-│   │   └── dailyResetService.ts # Automatic daily reset
+│   ├── services/                 # Core app logic
+│   │   ├── scoringEngine.ts      # Deterministic task scoring algorithm
+│   │   ├── taskService.ts        # Task lifecycle management service
+│   │   ├── userService.ts        # User metrics management service
+│   │   └── dailyResetService.ts 	# Automatic daily reset service
 │   ├── routes/
-│   │   └── api.ts             # RESTful API endpoints
+│   │   └── api.ts                # RESTful API endpoints
 │   ├── types/
-│   │   └── index.ts           # TypeScript interfaces
-│   └── index.ts               # Express server setup
-├── tests/                     # Jest unit tests
-└── package.json
+│   │   └── index.ts              # TypeScript interfaces
+│   └── index.ts                  # Express server setup
+└──  tests/                       # Unit tests
 ```
 
 ### Frontend Architecture (React + TypeScript + Tailwind CSS)
@@ -40,12 +39,12 @@ server/
 client/
 ├── src/
 │   ├── components/           # Reusable UI components
-│   │   ├── TaskCard.tsx      # Individual task display/interaction
-│   │   ├── MetricsPanel.tsx  # Real-time metrics with debouncing
-|   |   └── Topbar.tsx        # Header with app title and status
+│   │   ├── TaskCard.tsx      # Individual task card
+│   │   ├── MetricsPanel.tsx  # User metrics panel with status
+|   |   └── Topbar.tsx        # Navbar with app logo and title
 │   │
 │   ├── services/
-│   │   └── api.ts            # HTTP client with type safety
+│   │   └── api.ts            # HTTP client
 │   ├── types/
 │   │   └── api.ts            # Shared TypeScript interfaces
 │   └── App.tsx               # Main application component

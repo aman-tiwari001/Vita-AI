@@ -14,15 +14,13 @@ const MetricsPanel: React.FC<MetricsPanelProps> = ({
   onUpdateMetrics,
   isLoading = false,
 }) => {
-  // Local state for immediate UI updates
   const [localMetrics, setLocalMetrics] = useState<UserMetrics>(metrics);
 
-  // Update local state when props change
   useEffect(() => {
     setLocalMetrics(metrics);
   }, [metrics]);
 
-  // Debounced function to update backend
+  // Debounced function to update user metrics
   const debouncedUpdate = useCallback(
     debounce((newMetrics: Partial<UserMetrics>) => {
       onUpdateMetrics(newMetrics);
@@ -31,11 +29,11 @@ const MetricsPanel: React.FC<MetricsPanelProps> = ({
   );
 
   const handleMetricChange = (key: keyof UserMetrics, value: number) => {
-    // Update local state immediately for instant UI feedback
+    // Update local state for instant UI feedback
     const newLocalMetrics = { ...localMetrics, [key]: value };
     setLocalMetrics(newLocalMetrics);
 
-    // Debounce the backend update
+    // Debounce the server side update
     debouncedUpdate({ [key]: value });
   };
 
