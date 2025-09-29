@@ -2,6 +2,9 @@
 
 A full-stack application that provides personalized wellness task recommendations based on user metrics and a sophisticated scoring algorithm. Built as a backend-heavy solution with intelligent task prioritization and adaptive user behavior analysis.
 
+<img width="1919" height="864" alt="image" src="https://github.com/user-attachments/assets/6a89bd29-b209-4907-a957-de86f686a027" />
+
+
 ## 🎯 Project Overview
 
 Vita-AI is a smart wellness task manager that helps users maintain healthy daily habits by providing contextual, prioritized task recommendations. The system uses a deterministic scoring algorithm to recommend exactly 4 tasks at any time, adapting to user behavior and preferences through intelligent substitution mechanisms.
