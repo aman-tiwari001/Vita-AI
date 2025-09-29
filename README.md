@@ -2,6 +2,10 @@
 
 A full-stack application that provides personalized wellness task recommendations based on user metrics and a sophisticated scoring algorithm. Built as a backend-heavy solution with intelligent task prioritization and adaptive user behavior analysis.
 
+
+**📌 Frontend:** [View Live](https://vita-ai-hub.vercel.app/) | **Backend (API Server):** [Access Live](https://vita-ai-server.vercel.app/)  
+
+
 <img width="1919" height="864" alt="image" src="https://github.com/user-attachments/assets/6a89bd29-b209-4907-a957-de86f686a027" />
 
 
@@ -33,7 +37,11 @@ server/
 │   ├── types/
 │   │   └── index.ts              # TypeScript interfaces
 │   └── index.ts                  # Express server setup
-└──  tests/                       # Unit tests
+└──  tests/                       # Unit tests (Jest)
+	├── api.test.ts                 # API endpoint tests
+	├── scoringEngine.test.ts       # Scoring engine tests
+	└── taskService.test.ts         # Task service tests
+
 ```
 
 ### Frontend Architecture (React + TypeScript + Tailwind CSS)
@@ -95,12 +103,6 @@ score(task) =
 - **Soft Time Gates**: Reduced scoring outside time windows (not exclusion)
 - **Dynamic Adaptation**: System relaxes constraints when few tasks available
 
-### 6. **Comprehensive Testing Interface**
-
-- **Reference Scenarios**: Built-in test cases matching specification
-- **One-Click Testing**: Easy verification of algorithm behavior
-- **Debug Information**: Detailed scoring rationale for development
-
 ## 💻 Tech Stack
 
 ### Backend
@@ -129,96 +131,6 @@ score(task) =
 - **Hot Reloading**: Both frontend and backend
 - **Cross-Platform**: Windows/Mac/Linux compatible
 
-## 🎨 Design Patterns & Architectural Decisions
-
-### 1. **Service Layer Pattern**
-
-```typescript
-// Clear separation of concerns
-export class TaskService {
-	static getRecommendations() {
-		/* business logic */
-	}
-	static completeTask() {
-		/* state management */
-	}
-}
-```
-
-**Benefits**: Testable, modular, maintainable code
-
-### 2. **Pure Functions for Scoring**
-
-```typescript
-export class ScoringEngine {
-	static calculateScore(task, metrics, timeWindow) {
-		// No side effects, deterministic output
-	}
-}
-```
-
-**Benefits**: Predictable, testable, cacheable
-
-### 3. **Strategy Pattern for Urgency Calculation**
-
-```typescript
-// Different urgency strategies per category
-switch (task.category) {
-	case 'hydration':
-		return (2000 - water_ml) / 2000;
-	case 'movement':
-		return (8000 - steps) / 8000;
-	// ...
-}
-```
-
-**Benefits**: Extensible, category-specific logic
-
-### 4. **Observer Pattern (React State)**
-
-```typescript
-// Automatic UI updates when state changes
-const [metrics, setMetrics] = useState();
-useEffect(() => fetchRecommendations(), [metrics]);
-```
-
-**Benefits**: Reactive UI, automatic synchronization
-
-## ⚖️ Trade-offs & Design Decisions
-
-### 1. **In-Memory Storage vs Database**
-
-**Decision**: In-memory storage  
-**Pros**: Zero setup, fast access, simple deployment  
-**Cons**: Data loss on restart, no persistence  
-**Rationale**: Assessment requirement, prototype-focused
-
-### 2. **Monolithic vs Microservices**
-
-**Decision**: Monolithic Express app  
-**Pros**: Simpler deployment, no network overhead  
-**Cons**: Less scalable, single point of failure  
-**Rationale**: Appropriate for prototype scale
-
-### 3. **Real-time Updates vs Polling**
-
-**Decision**: Manual refresh + auto-refresh on actions  
-**Pros**: Simple implementation, lower server load  
-**Cons**: Not truly real-time  
-**Rationale**: Matches assessment scope
-
-### 4. **Client-side vs Server-side Validation**
-
-**Decision**: Primarily client-side with server backup  
-**Pros**: Better UX, reduced server load  
-**Cons**: Potential security gaps (acceptable for prototype)
-
-### 5. **Fixed Weights vs Machine Learning**
-
-**Decision**: Fixed algorithmic weights  
-**Pros**: Predictable, deterministic, testable  
-**Cons**: Less personalized than ML approach  
-**Rationale**: Assessment requirements, deterministic scoring
 
 ## 🛠️ Setup Instructions
 
@@ -251,6 +163,7 @@ npm run build    # Compile TypeScript to JavaScript
 npm run start    # Production server (requires build first)
 npm run test     # Run Jest unit tests
 npm run lint     # ESLint code analysis
+npm run format   # Format code with Prettier
 ```
 
 ### 3. Frontend Setup (New Terminal)
@@ -290,7 +203,7 @@ npm test  # Run Jest unit tests
 1. **Algorithm Verification**: Use built-in test scenarios
 2. **Metric Updates**: Complete tasks, watch auto-updates
 3. **Debouncing**: Rapidly change metrics, observe API batching
-4. **Daily Reset**: Use admin panel to trigger reset
+4. **Daily Reset**: Automatic reset on date change
 
 ### API Testing
 
@@ -369,7 +282,7 @@ This implementation fully meets the assessment requirements:
 ✅ **Time-of-day gating** with soft constraints  
 ✅ **No immediate repeats** after dismissal  
 ✅ **Clean code architecture** with separation of concerns  
-✅ **Comprehensive testing** with unit tests and scenarios  
+✅ **Comprehensive testing** with unit tests using Jest
 ✅ **Detailed documentation** with setup instructions
 
 _Built by Aman Tiwari with ❤️_

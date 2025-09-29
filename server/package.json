@@ -8,9 +8,6 @@
     "dev": "nodemon src/index.ts",
     "build": "tsc",
     "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "test:quick": "npm run build && node src/__tests__/quickTest.js",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "format": "prettier --write src/**/*.ts"
