@@ -31,7 +31,6 @@ export const taskApi = {
   // Get current metrics
   getMetrics: async (): Promise<{
     metrics: UserMetrics;
-    timestamp: string;
   }> => {
     const response = await api.get('/metrics');
     return response.data;
@@ -40,11 +39,10 @@ export const taskApi = {
   // Update metrics
   updateMetrics: async (
     metrics: Partial<UserMetrics>
-  ): Promise<{ success: boolean; metrics: UserMetrics; timestamp: string }> => {
+  ): Promise<{ success: boolean; metrics: UserMetrics }> => {
     const response = await api.post('/metrics', metrics);
     return response.data;
   },
-
 };
 
 export default api;

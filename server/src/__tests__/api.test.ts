@@ -48,7 +48,10 @@ describe('API Integration Tests', () => {
     });
 
     it('should match Scenario A reference values', async () => {
-      // Set Scenario A metrics
+      // Reset before setting up scenario
+      TaskService.dailyReset();
+
+      // Set test metrics for Scenario A
       await request(app)
         .post('/api/metrics')
         .send({
@@ -60,6 +63,9 @@ describe('API Integration Tests', () => {
         })
         .expect(200);
 
+      // Set up substitution scenario: screen-break-20 has been ignored 3+ times
+      TaskService.setTaskIgnores('screen-break-20', 3);
+
       // Get recommendations for day window (15:00)
       const response = await request(app)
         .get('/api/recommendations?hour=15')
@@ -68,12 +74,13 @@ describe('API Integration Tests', () => {
       const recommendations = response.body.recommendations;
       expect(recommendations).toHaveLength(4);
 
-      // Expected order and scores (actual implementation results)
+      // Expected order and scores with proper time gate filtering (day window = 15:00)
+      // Only tasks without time_gate or day time_gate should appear initially
       const expected = [
-        { id: 'sleep-winddown-15', score: 2.0667 },
-        { id: 'screen-break-10', score: 1.8918 },
-        { id: 'water-500', score: 1.6784 },
-        { id: 'steps-1k', score: 1.6418 },
+        { id: 'screen-break-10', score: 1.8918 }, // Substituted for screen-break-20, no time gate
+        { id: 'water-500', score: 1.6784 }, // No time gate
+        { id: 'steps-1k', score: 1.6418 }, // No time gate
+        { id: 'mood-check-quick', score: 1.3146 }, // No time gate
       ];
 
       expected.forEach((expectedTask, index) => {
@@ -141,6 +148,18 @@ describe('API Integration Tests', () => {
 
   describe('POST /api/actions/dismiss', () => {
     it('should increment ignore count and trigger substitution after 3 dismissals', async () => {
+      // Set metrics to prioritize hydration to ensure water-250 appears in top 4
+      await request(app)
+        .post('/api/metrics')
+        .send({
+          water_ml: 0, // High hydration need
+          steps: 5000, // Lower step need
+          sleep_hours: 8, // Good sleep
+          screen_time_min: 30, // Low screen time
+          mood_1to5: 4, // Good mood
+        })
+        .expect(200);
+
       // Dismiss water-500 three times
       for (let i = 0; i < 3; i++) {
         await request(app)

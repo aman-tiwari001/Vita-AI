@@ -36,10 +36,41 @@ export class TaskService {
     },
     {
       id: 'steps-300',
-      title: 'Walk 300 steps (indoors ok)',
+      title: 'Walk 300 steps',
       category: 'movement',
       impact_weight: 3,
       effort_min: 5,
+      ignores: 0,
+      completedToday: false,
+    },
+    {
+      id: 'workout-40',
+      title: 'Do a 40-min workout',
+      category: 'movement',
+      impact_weight: 5,
+      effort_min: 40,
+      micro_alt: 'workout-20',
+      time_gate: 'morning',
+      ignores: 0,
+      completedToday: false,
+    },
+    {
+      id: 'workout-20',
+      title: 'Do a 20-min workout',
+      category: 'movement',
+      impact_weight: 4,
+      effort_min: 20,
+      time_gate: 'morning',
+      ignores: 0,
+      completedToday: false,
+    },
+    {
+      id: 'screen-break-20',
+      title: 'Take a 20-min screen break',
+      category: 'screen',
+      impact_weight: 5,
+      effort_min: 20,
+      micro_alt: 'screen-break-10',
       ignores: 0,
       completedToday: false,
     },
@@ -73,7 +104,9 @@ export class TaskService {
     },
   ];
 
-  private static recentlyDismissed: Set<string> = new Set();
+  // Track tasks that should be temporarily hidden after dismiss (cool-down period)
+  private static dismissCooldown: Map<string, number> = new Map();
+  private static recommendationCount: number = 0;
 
   /**
    * Get all tasks
@@ -99,14 +132,17 @@ export class TaskService {
    */
   static applySubstitutionRules(candidateTasks: Task[]): Task[] {
     const result: Task[] = [];
+    const substituted = new Set<string>(); // Track which micro alternatives were substituted
 
     for (const task of candidateTasks) {
       if (task.ignores >= 3 && task.micro_alt) {
         const microTask = this.tasks.find((t) => t.id === task.micro_alt);
         if (microTask && !microTask.completedToday) {
           result.push(microTask);
+          substituted.add(task.micro_alt); // Mark this micro alt as substituted
         }
-      } else {
+      } else if (!substituted.has(task.id)) {
+        // Only add the task if it wasn't already substituted in
         result.push(task);
       }
     }
@@ -155,45 +191,96 @@ export class TaskService {
   }
 
   /**
+   * Filter out micro alternatives that shouldn't appear unless their parent is completed or ignored 3+ times
+   * @param candidateTasks List of candidate tasks
+   * @returns Filtered list with only eligible micro alternatives
+   */
+  static filterIneligibleMicroAlternatives(candidateTasks: Task[]): Task[] {
+    return candidateTasks.filter((task) => {
+      // Find if this task is a micro alternative of another task
+      const parentTask = this.tasks.find((t) => t.micro_alt === task.id);
+
+      // If this is not a micro alternative, it's always eligible
+      if (!parentTask) {
+        return true;
+      }
+
+      // This is a micro alternative - only show it if:
+      // 1. Parent task is completed today, OR
+      // 2. Parent task has been ignored 3+ times
+      return parentTask.completedToday || parentTask.ignores >= 3;
+    });
+  }
+
+  /**
    * Get top 4 task recommendations based on scoring algorithm
    * @param metrics Current user metrics
-   * @param currentHour Current hour (0-23) for time window calculation (optional)
+   * @param currentHour Current hour (0-23) for time window calculation
    * @returns Array of top 4 TaskScore objects
    */
   static getRecommendations(
     metrics: UserMetrics,
     currentHour?: number
   ): TaskScore[] {
-    // Check for daily reset on first request of new day
+    // Check for daily reset on first request
     if (DailyResetService.checkAndPerformDailyReset()) {
       this.performDailyReset();
     }
 
+    // Increment recommendation count for cool-down tracking
+    this.recommendationCount++;
+
     const currentTimeWindow = ScoringEngine.getCurrentTimeWindow(currentHour);
 
-    // Step 1: Get all eligible tasks (not completed today)
+    // Get all eligible tasks (not completed today)
     let candidateTasks = this.tasks.filter((task) => !task.completedToday);
 
-    // Step 2: Apply substitution rules
+    // Filter out micro alternatives unless their parent task is completed or ignored 3+ times
+    candidateTasks = this.filterIneligibleMicroAlternatives(candidateTasks);
+
+    // Apply substitution rules - replace parent tasks with micro alternatives if ignored 3+ times
     candidateTasks = this.applySubstitutionRules(candidateTasks);
 
-    // Step 3: Remove recently dismissed tasks in this request cycle
-    candidateTasks = candidateTasks.filter(
-      (task) => !this.recentlyDismissed.has(task.id)
+    // Filter out tasks in cool-down period (temporarily hidden)
+    let cooledDownTasks = candidateTasks.filter((task) => {
+      if (task.ignores >= 3) {
+        return true;
+      }
+
+      const cooldownUntil = this.dismissCooldown.get(task.id);
+      return !cooldownUntil || this.recommendationCount > cooldownUntil;
+    });
+
+    // If fewer than 4 tasks after cool-down filtering then relax cool-down to ensure 4 tasks
+    if (cooledDownTasks.length < 4) {
+      cooledDownTasks = candidateTasks;
+    }
+
+    // Filter tasks based on time gating - prefer tasks matching current time window
+    let timeFilteredTasks = cooledDownTasks.filter((task) =>
+      task.time_gate ? task.time_gate === currentTimeWindow : true
     );
 
-    // Step 4: Calculate scores
-    const scoredTasks: TaskScore[] = candidateTasks.map((task) => {
+    // Determine if we need to relax time gates
+    const relaxTimeGates = timeFilteredTasks.length < 4;
+
+    // Relax time gates for tasks
+    if (relaxTimeGates) {
+      timeFilteredTasks = cooledDownTasks;
+    }
+
+    // Calculate scores
+    const scoredTasks: TaskScore[] = timeFilteredTasks.map((task) => {
       const score = ScoringEngine.calculateScore(
         task,
         metrics,
-        currentTimeWindow
+        relaxTimeGates ? undefined : currentTimeWindow
       );
       const rationale = ScoringEngine.generateRationale(
         task,
         metrics,
         score,
-        currentTimeWindow
+        relaxTimeGates ? undefined : currentTimeWindow
       );
 
       return {
@@ -203,7 +290,7 @@ export class TaskService {
       };
     });
 
-    // Step 5: Sort by score (desc), then impact_weight (desc), then effort_min (asc), then id (asc)
+    // Sort by score (desc), then impact_weight (desc), then effort_min (asc), then id (asc)
     scoredTasks.sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
       if (b.task.impact_weight !== a.task.impact_weight)
@@ -213,71 +300,11 @@ export class TaskService {
       return a.task.id.localeCompare(b.task.id);
     });
 
-    // Step 6: Filter to ensure no task and its micro alternative appear together
+    // Filter to ensure no task and its micro alternative appear together
     const filteredTasks = this.filterMicroAlternatives(scoredTasks);
 
-    // Step 7: Return top 4 unique tasks
-    let result = filteredTasks.slice(0, 4);
-
-    // Step 8: If less than 4 tasks, relax time gates and try again (but don't duplicate IDs)
-    if (result.length < 4) {
-      const usedIds = new Set(result.map((item: TaskScore) => item.task.id));
-      const remainingTasks = candidateTasks.filter(
-        (task) => !usedIds.has(task.id)
-      );
-
-      const relaxedScores = remainingTasks.map((task) => {
-        // Treat timeOfDayFactor as 1 for all tasks
-        const score = ScoringEngine.calculateScore(
-          task,
-          metrics,
-          currentTimeWindow,
-          {
-            W_urgency: 0.5,
-            W_impact: 0.3,
-            W_effort: 0.15,
-            W_tod: 0.15, // But calculate with factor 1
-            W_penalty: 0.2,
-          }
-        );
-
-        // Manually override time factor to 1
-        const adjustedScore =
-          score -
-          0.15 *
-            ScoringEngine.timeOfDayFactor(task.time_gate, currentTimeWindow) +
-          0.15 * 1;
-        const rationale = ScoringEngine.generateRationale(
-          task,
-          metrics,
-          adjustedScore,
-          currentTimeWindow
-        );
-
-        return {
-          task,
-          score: adjustedScore,
-          rationale,
-        };
-      });
-
-      relaxedScores.sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        if (b.task.impact_weight !== a.task.impact_weight)
-          return b.task.impact_weight - a.task.impact_weight;
-        if (a.task.effort_min !== b.task.effort_min)
-          return a.task.effort_min - b.task.effort_min;
-        return a.task.id.localeCompare(b.task.id);
-      });
-
-      // Filter relaxed scores to avoid micro alternative conflicts
-      const filteredRelaxedScores = this.filterMicroAlternatives([
-        ...result,
-        ...relaxedScores,
-      ]);
-      result = filteredRelaxedScores.slice(0, 4);
-    }
-
+    // Return top 4 unique tasks
+    const result = filteredTasks.slice(0, 4);
     return result;
   }
 
@@ -291,7 +318,6 @@ export class TaskService {
     if (task && !task.completedToday) {
       task.completedToday = true;
 
-      // Auto-update user metrics based on completed task
       this.updateMetricsForCompletedTask(task);
 
       return true;
@@ -300,7 +326,7 @@ export class TaskService {
   }
 
   /**
-   * Dismiss a task (increment ignore count and add to recently dismissed)
+   * Dismiss a task (apply cool-down period)
    * @param taskId Task ID
    * @returns True if task was marked dismissed, else false
    */
@@ -308,7 +334,12 @@ export class TaskService {
     const task = this.getTaskById(taskId);
     if (task) {
       task.ignores += 1;
-      this.recentlyDismissed.add(taskId);
+
+      // Add cool-down period for the task, it will be hidden for the next 2 recommendation cycles
+      if (task.ignores < 3) {
+        this.dismissCooldown.set(taskId, this.recommendationCount + 2);
+      }
+
       return true;
     }
     return false;
@@ -326,14 +357,14 @@ export class TaskService {
    * Internal method to perform the actual reset
    */
   private static performDailyReset(): void {
-    console.log('🔄 Performing daily reset of tasks');
+    console.log('Performing daily reset of tasks');
     this.tasks.forEach((task) => {
       task.ignores = 0;
       task.completedToday = false;
     });
-    this.recentlyDismissed.clear();
+    this.dismissCooldown.clear();
+    this.recommendationCount = 0;
 
-    // Also reset user metrics
     UserService.resetDailyMetrics();
   }
 
@@ -363,60 +394,34 @@ export class TaskService {
         break;
 
       case 'screen':
-        // For screen break, we don't directly update metrics
-        // but we could track break completion
+        // For screen break, we don't directly update metrics coz it's a break
         break;
 
       case 'sleep':
-        // Sleep tasks don't directly update sleep hours
-        // (those are from previous night's sleep)
+        // Sleep tasks don't directly update sleep hours coz they are wind-down routines
         break;
 
       case 'mood':
-        // Mood check-in could potentially improve mood score slightly
-        if (currentMetrics.mood_1to5 < 5) {
-          updates.mood_1to5 = Math.min(currentMetrics.mood_1to5 + 0.5, 5);
-        }
+        // It's a quick mood check-in reminder for user to input his mood level on scale 1-5
         break;
     }
 
     // Update metrics if there are changes
     if (Object.keys(updates).length > 0) {
       UserService.updateMetrics(updates);
-      console.log(
-        `📊 Auto-updated metrics for completed task ${task.id}:`,
-        updates
-      );
+      console.log(`Updated metrics for completed task ${task.id}:`, updates);
     }
   }
 
   /**
-   * Clear recently dismissed tasks (for new request cycle)
-   */
-  static clearRecentlyDismissed(): void {
-    this.recentlyDismissed.clear();
-  }
-
-  /**
-   * Seed tasks (for admin endpoint)
-   */
-  static seedTasks(): Task[] {
-    // Tasks are already seeded in the static array
-    return this.getAllTasks();
-  }
-
-  /**
-   * Update task ignores (for testing)
+   * Set ignores count for a task (for testing purposes)
    * @param taskId Task ID
-   * @param ignores New ignore count
-   * @returns True if task was found and updated, else false
+   * @param ignores Number of ignores
    */
-  static updateTaskIgnores(taskId: string, ignores: number): boolean {
+  static setTaskIgnores(taskId: string, ignores: number): void {
     const task = this.getTaskById(taskId);
     if (task) {
       task.ignores = ignores;
-      return true;
     }
-    return false;
   }
 }

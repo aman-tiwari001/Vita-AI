@@ -16,7 +16,8 @@
     "allowSyntheticDefaultImports": true,
     "sourceMap": true,
     "noImplicitAny": true,
-    "moduleResolution": "node",
+    // "moduleResolution": "node",
+    "ignoreDeprecations": "5.0",
     "importHelpers": false,
     "types": ["node", "jest"],
     "typeRoots": ["node_modules/@types"]

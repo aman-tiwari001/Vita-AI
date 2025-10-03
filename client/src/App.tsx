@@ -108,7 +108,7 @@ function App() {
       <Topbar />
 
       <div className="mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Task Cards Section */}
+        {/* Recommended Cards Section */}
         <div className="lg:col-span-2">
           <div className="mb-6">
             <div className="flex items-center justify-between my-5">
@@ -154,9 +154,8 @@ function App() {
           </div>
         </div>
 
-        {/* Sidebar */}
+        {/* Metrics Panel */}
         <div className="my-12">
-          {/* Metrics Panel */}
           <MetricsPanel
             metrics={metrics}
             onUpdateMetrics={handleUpdateMetrics}
@@ -167,7 +166,7 @@ function App() {
 
       {/* Footer */}
       <div className="max-w-6xl mx-auto mt-12 text-center text-sm text-gray-500">
-        <p>Vita AI v1 - Smart Wellness Application</p>
+        <p>Vita AI - Smart Wellness Application</p>
         <p>
           Developed by{' '}
           <a

@@ -1,7 +1,7 @@
 import { Task, UserMetrics, ScoringWeights, TimeWindow } from '../types/index';
 
 export class ScoringEngine {
-  // Values as per the assignment documentation
+  // Wt. values as per given in the assignment documentation
   private static readonly DEFAULT_WEIGHTS: ScoringWeights = {
     W_urgency: 0.5,
     W_impact: 0.3,
@@ -86,13 +86,18 @@ export class ScoringEngine {
   static calculateScore(
     task: Task,
     metrics: UserMetrics,
-    currentTimeWindow: TimeWindow = ScoringEngine.getCurrentTimeWindow(),
+    currentTimeWindow:
+      | TimeWindow
+      | undefined = ScoringEngine.getCurrentTimeWindow(),
     weights: ScoringWeights = ScoringEngine.DEFAULT_WEIGHTS
   ): number {
     const urgency = this.urgencyContribution(task, metrics);
     const impact = task.impact_weight;
     const effort = this.inverseEffort(task.effort_min);
-    const timeOfDay = this.timeOfDayFactor(task.time_gate, currentTimeWindow);
+    // If currentTimeWindow is undefined, treat as relaxed time gates (timeOfDayFactor = 1)
+    const timeOfDay = currentTimeWindow
+      ? this.timeOfDayFactor(task.time_gate, currentTimeWindow)
+      : 1;
     const penalty = task.ignores;
 
     const score =
@@ -117,10 +122,15 @@ export class ScoringEngine {
     task: Task,
     metrics: UserMetrics,
     score: number,
-    currentTimeWindow: TimeWindow = ScoringEngine.getCurrentTimeWindow()
+    currentTimeWindow:
+      | TimeWindow
+      | undefined = ScoringEngine.getCurrentTimeWindow()
   ): string {
     const urgency = this.urgencyContribution(task, metrics);
-    const timeOfDay = this.timeOfDayFactor(task.time_gate, currentTimeWindow);
+    // If currentTimeWindow is undefined, treat as relaxed time gates (timeOfDayFactor = 1)
+    const timeOfDay = currentTimeWindow
+      ? this.timeOfDayFactor(task.time_gate, currentTimeWindow)
+      : 1;
 
     let rationale = `Score: ${score} | `;
     rationale += `Urgency: ${urgency.toFixed(3)} | `;

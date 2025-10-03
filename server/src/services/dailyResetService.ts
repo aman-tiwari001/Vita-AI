@@ -10,20 +10,20 @@ export class DailyResetService {
 
     if (currentDate !== this.lastResetDate) {
       console.log(
-        `🌅 Performing daily reset - Date changed from ${this.lastResetDate} to ${currentDate}`
+        `Performing daily reset - Date changed from ${this.lastResetDate} to ${currentDate}`
       );
 
       // Update the last reset date
       this.lastResetDate = currentDate;
 
-      return true; // Indicates reset was performed
+      return true;
     }
 
-    return false; // No reset needed
+    return false;
   }
 
   /**
-   * Force daily reset (for testing)
+   * Force daily reset
    */
   static forceDailyReset(): void {
     this.lastResetDate = new Date().toDateString();

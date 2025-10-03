@@ -216,6 +216,9 @@ const MetricsPanel: React.FC<MetricsPanelProps> = ({
                 </button>
               ))}
             </div>
+            <p className="text-sm text-gray-600 mt-2">
+              Scale: 1 = Negative ➡️ 5 = Positive.
+            </p>
           </div>
         </div>
       </div>

@@ -12,14 +12,11 @@ const router = Router();
 /**
  * GET /api/recommendations
  * Returns top 4 task recommendations based on current user metrics
- * Response: { recommendations: TaskScore[], timestamp: string, user_metrics: UserMetrics }
+ * Response: { recommendations: TaskScore[], user_metrics: UserMetrics, timestamp: string }
  * Error: { error: string }
  */
 router.get('/recommendations', (req, res) => {
   try {
-    // Clear recently dismissed tasks for new request cycle
-    TaskService.clearRecentlyDismissed();
-
     const currentMetrics = UserService.getCurrentMetrics();
     const currentHour = req.query.hour
       ? parseInt(req.query.hour as string)
@@ -32,8 +29,8 @@ router.get('/recommendations', (req, res) => {
 
     const response: RecommendationResponse = {
       recommendations,
-      timestamp: new Date().toISOString(),
       user_metrics: currentMetrics,
+      timestamp: new Date().toISOString(),
     };
 
     res.json(response);
@@ -47,7 +44,7 @@ router.get('/recommendations', (req, res) => {
  * POST /api/actions/complete
  * Mark a task as completed
  * Request body: { task_id: string }
- * Response: { success: boolean, message: string, timestamp: string }
+ * Response: { success: boolean, message: string }
  * Error: { error: string }
  */
 router.post('/actions/complete', (req, res) => {
@@ -64,7 +61,6 @@ router.post('/actions/complete', (req, res) => {
       res.json({
         success: true,
         message: `Task ${task_id} completed successfully`,
-        timestamp: new Date().toISOString(),
       });
     } else {
       res.status(404).json({ error: 'Task not found or already completed' });
@@ -79,7 +75,7 @@ router.post('/actions/complete', (req, res) => {
  * POST /api/actions/dismiss
  * Dismiss a task (increment ignore count)
  * Request body: { task_id: string }
- * Response: { success: boolean, message: string, timestamp: string }
+ * Response: { success: boolean, message: string }
  * Error: { error: string }
  */
 router.post('/actions/dismiss', (req, res) => {
@@ -96,7 +92,6 @@ router.post('/actions/dismiss', (req, res) => {
       res.json({
         success: true,
         message: `Task ${task_id} dismissed successfully`,
-        timestamp: new Date().toISOString(),
       });
     } else {
       res.status(404).json({ error: 'Task not found' });
@@ -110,7 +105,7 @@ router.post('/actions/dismiss', (req, res) => {
 /**
  * GET /api/metrics
  * Get current user metrics
- * Response: { metrics: UserMetrics, timestamp: string }
+ * Response: { metrics: UserMetrics }
  * Error: { error: string }
  */
 router.get('/metrics', (req, res) => {
@@ -118,7 +113,6 @@ router.get('/metrics', (req, res) => {
     const metrics = UserService.getCurrentMetrics();
     res.json({
       metrics,
-      timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error('Error getting metrics:', error);
@@ -130,7 +124,7 @@ router.get('/metrics', (req, res) => {
  * POST /api/metrics
  * Update user metrics
  * Request body: Partial<UserMetrics>
- * Response: { success: boolean, metrics: UserMetrics, timestamp: string }
+ * Response: { success: boolean, metrics: UserMetrics }
  * Error: { error: string }
  */
 router.post('/metrics', (req, res) => {
@@ -141,7 +135,6 @@ router.post('/metrics', (req, res) => {
     res.json({
       success: true,
       metrics: updatedMetrics,
-      timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error('Error updating metrics:', error);

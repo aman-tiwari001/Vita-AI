@@ -63,7 +63,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
     <div
       className={`relative p-4 rounded-lg border-2 transition-all duration-300 hover:shadow-lg ${getCategoryColor()} ${isLoading ? 'opacity-50' : ''}`}
     >
-      {/* Header */}
+      {/* Main Header */}
       <div className="flex items-start justify-between mb-3 py-1">
         <div className="flex items-baseline-last gap-3">
           {getCategoryIcon()}
@@ -71,17 +71,16 @@ const TaskCard: React.FC<TaskCardProps> = ({
             <h3 className="font-semibold text-gray-800 text-sm leading-tight">
               {task.title}
             </h3>
-            <div className="flex items-center justify-between gap-[240px] w-full mt-1">
-              <div className="flex items-center gap-2 ">
-                <span className="text-xs text-gray-600">
-                  {task.effort_min} min
-                </span>
-                <span className="text-xs text-gray-400">•</span>
-                <span className="text-xs font-medium text-gray-700">
-                  Score: {score.toFixed(2)}
-                </span>
-              </div>
-              {/* Time Gate Indicator */}
+            <div className="flex items-center gap-2 ">
+              <span className="text-xs text-gray-600">
+                {task.effort_min} min
+              </span>
+              <span className="text-xs text-gray-400">•</span>
+              <span className="text-xs font-medium text-gray-700">
+                Score: {score.toFixed(2)}
+              </span>
+            </div>
+            <div className="absolute right-4 top-4">
               {task.time_gate && (
                 <div className="mb-3">
                   <span className="inline-block px-2 py-1 text-xs rounded-full bg-pink-200 text-black capitalize">
@@ -113,7 +112,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
         </button>
       </div>
 
-      {/* Debug Info (can be removed in production) */}
+      {/* Extra info about task */}
       <details className="mt-2">
         <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
           Info

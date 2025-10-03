@@ -31,7 +31,7 @@ export class UserService {
   }
 
   /**
-   * Reset daily metrics (called during daily reset)
+   * Reset daily metrics
    */
   static resetDailyMetrics(): void {
     this.currentMetrics = {
@@ -44,7 +44,7 @@ export class UserService {
   }
 
   /**
-   * Set specific test scenario metrics
+   * Set specific test scenario metrics (for testing purposes)
    * @param metrics Metrics to set
    * @returns Updated metrics
    */

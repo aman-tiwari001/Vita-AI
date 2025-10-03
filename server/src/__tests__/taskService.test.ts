@@ -22,6 +22,9 @@ describe('TaskService - Behavioral Tests', () => {
 
       UserService.setTestMetrics(scenarioAMetrics);
 
+      // Set up substitution scenario: screen-break-20 has been ignored 3+ times
+      TaskService.setTaskIgnores('screen-break-20', 3);
+
       // Get recommendations for 15:00 (day window)
       const recommendations = TaskService.getRecommendations(
         scenarioAMetrics,
@@ -31,14 +34,13 @@ describe('TaskService - Behavioral Tests', () => {
       // Should return exactly 4 recommendations
       expect(recommendations).toHaveLength(4);
 
-      // Expected order and scores from actual implementation (≥ 4dp precision)
-      // Note: sleep-winddown-15 ranks first due to high urgency (sleep < 7hrs) + high impact (5)
-      // even with time gate penalty, but specification expected different order
+      // Expected order and scores with proper time gate filtering (day window = 15:00)
+      // Only tasks without time_gate or day time_gate should appear initially
       const expected = [
-        { id: 'sleep-winddown-15', score: 2.0667 },
-        { id: 'screen-break-10', score: 1.8918 },
-        { id: 'water-500', score: 1.6784 },
-        { id: 'steps-1k', score: 1.6418 },
+        { id: 'screen-break-10', score: 1.8918 }, // Substituted for screen-break-20, no time gate
+        { id: 'water-500', score: 1.6784 }, // No time gate
+        { id: 'steps-1k', score: 1.6418 }, // No time gate
+        { id: 'mood-check-quick', score: 1.3146 }, // No time gate
       ];
 
       // Verify order and scores match exactly
@@ -81,11 +83,11 @@ describe('TaskService - Behavioral Tests', () => {
   describe('Task Substitution', () => {
     it('should substitute micro task after 3 dismissals', () => {
       const testMetrics: UserMetrics = {
-        water_ml: 0,
-        steps: 0,
-        sleep_hours: 8,
-        screen_time_min: 60,
-        mood_1to5: 3,
+        water_ml: 0, // High hydration need
+        steps: 5000, // Lower step need
+        sleep_hours: 8, // Good sleep
+        screen_time_min: 30, // Low screen time
+        mood_1to5: 4, // Good mood
       };
 
       UserService.setTestMetrics(testMetrics);
@@ -98,8 +100,7 @@ describe('TaskService - Behavioral Tests', () => {
       // Dismiss water-500 three times
       for (let i = 0; i < 3; i++) {
         TaskService.dismissTask('water-500');
-        // Clear recently dismissed for new recommendation cycle
-        TaskService.clearRecentlyDismissed();
+        // Cooldown mechanism automatically handles dismiss state
       }
 
       // After 3 dismissals, water-250 should appear instead of water-500
@@ -129,7 +130,6 @@ describe('TaskService - Behavioral Tests', () => {
       // Dismiss steps-1k three times
       for (let i = 0; i < 3; i++) {
         TaskService.dismissTask('steps-1k');
-        TaskService.clearRecentlyDismissed();
       }
 
       // After 3 dismissals, steps-300 should appear instead of steps-1k
@@ -225,8 +225,7 @@ describe('TaskService - Behavioral Tests', () => {
       const newTaskIds = recommendations.map((r) => r.task.id);
       expect(newTaskIds).not.toContain('water-500');
 
-      // After clearing recently dismissed (new request cycle), task can appear again
-      TaskService.clearRecentlyDismissed();
+      // The cooldown mechanism handles dismiss behavior across request cycles
       recommendations = TaskService.getRecommendations(testMetrics);
       recommendations.map((r) => r.task.id);
     });
@@ -387,6 +386,45 @@ describe('TaskService - Behavioral Tests', () => {
       const taskIds = recommendations.map((r) => r.task.id);
       expect(taskIds).not.toContain('water-500');
       expect(taskIds).not.toContain('steps-1k');
+    });
+  });
+
+  describe('Cooldown Relaxation', () => {
+    it('should relax cooldown period when fewer than 4 tasks available', () => {
+      const testMetrics: UserMetrics = {
+        water_ml: 2000, // Met water goal
+        steps: 10000, // Met steps goal
+        sleep_hours: 8, // Good sleep
+        screen_time_min: 30, // Low screen time
+        mood_1to5: 5, // Great mood
+      };
+
+      UserService.setTestMetrics(testMetrics);
+
+      // Complete most tasks to reduce available candidates
+      TaskService.completeTask('water-500');
+      TaskService.completeTask('steps-1k');
+      TaskService.completeTask('workout-40');
+      TaskService.completeTask('screen-break-20');
+      TaskService.completeTask('sleep-winddown-15');
+
+      // Dismiss the remaining tasks to put them in cooldown
+      TaskService.dismissTask('water-250');
+      TaskService.dismissTask('steps-300');
+      TaskService.dismissTask('workout-20');
+
+      // Should only have 2 tasks not in cooldown: screen-break-10, mood-check-quick
+      // But should still return 4 recommendations due to cooldown relaxation
+      const recommendations = TaskService.getRecommendations(testMetrics);
+
+      expect(recommendations).toHaveLength(4);
+
+      // Should include the dismissed tasks due to relaxation
+      const taskIds = recommendations.map((r) => r.task.id);
+      expect(taskIds).toContain('water-250');
+      expect(taskIds).toContain('screen-break-10');
+      expect(taskIds).toContain('mood-check-quick');
+      // Note: workout-20 may not appear due to time gate filtering and scoring
     });
   });
 });
