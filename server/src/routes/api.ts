@@ -29,7 +29,6 @@ router.get('/recommendations', (req, res) => {
 
     const response: RecommendationResponse = {
       recommendations,
-      user_metrics: currentMetrics,
       timestamp: new Date().toISOString(),
     };
 

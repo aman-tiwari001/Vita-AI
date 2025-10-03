@@ -26,7 +26,6 @@ export interface TaskScore {
 
 export interface RecommendationResponse {
   recommendations: TaskScore[];
-  user_metrics: UserMetrics;
   timestamp: string;
 }
 

@@ -26,7 +26,7 @@ describe('API Integration Tests', () => {
 
       expect(response.body).toHaveProperty('recommendations');
       expect(response.body).toHaveProperty('timestamp');
-      expect(response.body).toHaveProperty('user_metrics');
+      // expect(response.body).toHaveProperty('user_metrics');
 
       expect(response.body.recommendations).toHaveLength(4);
 
