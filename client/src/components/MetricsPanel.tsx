@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { debounce } from 'lodash';
 import type { UserMetrics } from '../types/api';
 import { FaWater, FaWalking, FaDesktop, FaBed, FaHeart } from 'react-icons/fa';
@@ -21,10 +21,12 @@ const MetricsPanel: React.FC<MetricsPanelProps> = ({
   }, [metrics]);
 
   // Debounced function to update user metrics
-  const debouncedUpdate = useCallback(
-    debounce((newMetrics: Partial<UserMetrics>) => {
-      onUpdateMetrics(newMetrics);
-    }, 500),
+  const debouncedUpdateMetricsFn = useMemo(
+    () =>
+      debounce(
+        (newMetrics: Partial<UserMetrics>) => onUpdateMetrics(newMetrics),
+        500
+      ),
     [onUpdateMetrics]
   );
 
@@ -34,7 +36,7 @@ const MetricsPanel: React.FC<MetricsPanelProps> = ({
     setLocalMetrics(newLocalMetrics);
 
     // Debounce the server side update
-    debouncedUpdate({ [key]: value });
+    debouncedUpdateMetricsFn({ [key]: value });
   };
 
   const getProgressPercentage = (current: number, goal: number) => {
@@ -43,7 +45,7 @@ const MetricsPanel: React.FC<MetricsPanelProps> = ({
 
   return (
     <div className="bg-pink-300 rounded-xl shadow-md p-6 -mt-6">
-      <h2 className="text-xl font-bold text-gray-800 mb-5">Daily Metrics</h2>
+      <h2 className="text-xl font-bold text-pink-900 mb-5">Daily Metrics</h2>
 
       <div className="space-y-8">
         {/* Water */}

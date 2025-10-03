@@ -6,6 +6,8 @@ import { taskApi } from './services/api';
 import type { TaskScore, UserMetrics } from './types/api';
 import Topbar from './components/Topbar';
 import { debounce } from 'lodash';
+import Footer from './components/Footer';
+import { BiRefresh } from 'react-icons/bi';
 
 function App() {
   const [recommendations, setRecommendations] = useState<TaskScore[]>([]);
@@ -19,22 +21,22 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Fetch initial data
+  // Fetch initial data - recommendations and user metrics
   const fetchRecommendations = async () => {
     try {
       setIsLoading(true);
       const response = await taskApi.getRecommendations();
+      const responseMetrics = await taskApi.getMetrics();
       setRecommendations(response.recommendations);
-      setMetrics(response.user_metrics);
+      setMetrics(responseMetrics.metrics);
     } catch (error) {
-      console.error('Error fetching recommendations:', error);
-      toast.error('Failed to load recommendations');
+      console.error('Error fetching recommendations or user metrics:', error);
+      toast.error('Failed to load recommendations or user metrics');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Initialize data on component mount
   useEffect(() => {
     if (!isInitialized) {
       fetchRecommendations().then(() => setIsInitialized(true));
@@ -89,12 +91,20 @@ function App() {
     }
   };
 
+  // Loading screen
   if (!isInitialized) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-pink-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading Vita-AI...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 shadow-2xl border-pink-600 mx-auto mb-6"></div>
+          <h1 className="text-2xl font-bold flex items-center text-pink-700 text-shadow-lg">
+            <img
+              src="/logo.png"
+              alt="Vita AI Logo"
+              className="inline-block w-10 h-10 mr-2 shadow-2xl bg-pink-100 rounded-full p-1"
+            />
+            Vita AI
+          </h1>
         </div>
       </div>
     );
@@ -104,26 +114,26 @@ function App() {
     <div className="min-h-screen p-4 bg-pink-100">
       <Toaster position="top-center" />
 
-      {/* Header */}
+      {/* Navigation bar */}
       <Topbar />
 
       <div className="mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recommended Cards Section */}
         <div className="lg:col-span-2">
           <div className="mb-6">
-            <div className="flex items-center justify-between my-5">
+            <div className="flex gap-2 items-center justify-between my-5">
               <div className="text-left">
-                <h2 className="text-xl font-bold text-gray-800">Your Tasks</h2>
-                <p className="text-gray-600 text-left text-sm">
+                <h2 className="text-xl font-bold text-pink-600">Your Tasks</h2>
+                <p className="text-gray-600 text-left text-sm text-wrap">
                   Personalized wellness tasks based on your daily metrics
                 </p>
               </div>
               <button
                 onClick={fetchRecommendations}
                 disabled={isLoading}
-                className="px-4 py-2 bg-gradient-to-l from-pink-500 to-pink-600 hover:bg-gradient-to-bl hover:scale-105 transition-all duration-300 hover:cursor-pointer disabled:bg-gray-300 text-white text-sm font-medium rounded-md"
+                className="p-2 flex gap-1 items-center bg-gradient-to-l from-pink-500 to-pink-600 hover:bg-gradient-to-bl hover:scale-105 transition-all duration-300 hover:cursor-pointer disabled:bg-gray-300 text-white text-sm font-medium rounded-md"
               >
-                {isLoading ? 'Refreshing...' : 'Refresh'}
+                <BiRefresh size={27}/>{isLoading ? 'Refreshing...' : 'Refresh'}
               </button>
             </div>
 
@@ -165,18 +175,7 @@ function App() {
       </div>
 
       {/* Footer */}
-      <div className="max-w-6xl mx-auto mt-12 text-center text-sm text-gray-500">
-        <p>Vita AI - Smart Wellness Application</p>
-        <p>
-          Developed by{' '}
-          <a
-            href="https://www.linkedin.com/in/aman-tiwari001/"
-            className="text-blue-500 font-bold underline"
-          >
-            Aman Tiwari
-          </a>
-        </p>
-      </div>
+      <Footer /> 
     </div>
   );
 }
